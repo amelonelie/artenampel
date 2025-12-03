@@ -1,0 +1,1 @@
+shinylive::export(appdir = "../artenampel", destdir = "docs")
