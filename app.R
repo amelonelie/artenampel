@@ -70,6 +70,7 @@ ui <- fluidPage(
                  column(6, uiOutput("overview_status_ui")),
                  column(6, uiOutput("overview_tiergruppe_ui"))
              ),
+             hr(),
              fluidRow(
                  column(6, 
                         selectInput("Tiergruppe", "Wähle eine Tiergruppe aus",
@@ -86,6 +87,8 @@ ui <- fluidPage(
                         uiOutput("art_image_ui")
                  )
              ),
+             hr(),
+             
              fluidRow(
                  column(12, uiOutput("arten_tabelle_ui"))
              )
