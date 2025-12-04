@@ -48,7 +48,6 @@
                 font-weight: 500;
             }
             
-<<<<<<< Updated upstream
             .species-image img {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.2s;
@@ -57,7 +56,6 @@
 .species-image img:hover {
     transform: scale(1.02);
 }
-=======
             hr {
                 height: 6px;
                 border-width: 0;
@@ -67,4 +65,3 @@
                 margin-left: -15px;
                 margin-right: -15px;
             }
->>>>>>> Stashed changes
