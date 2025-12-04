@@ -74,7 +74,7 @@ ui <- fluidPage(
              ),
              hr(),
              fluidRow(
-                 column(6, 
+                 column(3, 
                         selectInput("Tiergruppe", "Wähle eine Tiergruppe aus",
                                     choices = unique(arten_data$tiergruppe_deutsch)
 
@@ -88,6 +88,10 @@ ui <- fluidPage(
                         uiOutput("art_info_ui"),
                         uiOutput("art_image_ui"), 
                         uiOutput("art_map_ui")
+                 column(3, 
+                        uiOutput("art_info_ui")),
+                 column(3,
+                        uiOutput("art_image_ui")
                  )
              ),
              hr(),
