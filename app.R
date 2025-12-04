@@ -17,6 +17,7 @@ library(DT)
 library(readxl)
 library(leaflet)
 library(jsonlite)
+library(tidyr)
 
 # Funktion zum Laden der Excel-Datei
 load_excel_data <- function(filepath = "/Users/amelonelie/Downloads/ameliestry/rote_liste_saeugetiere_2005.xlsx") {
@@ -44,7 +45,7 @@ kategorien <- data.frame(
               "#72B043", "#4D8126", "#D1D1C6", "#DDDDDD"),
     stringsAsFactors = FALSE
 )
-
+reihenfolge <- c("LC", "NT", "VU", "EN", "CR", "RE", "EX")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -146,26 +147,35 @@ server <- function(input, output, session) {
                 plotlyOutput("overview_status_plot", height = "350px"))
         }
     })
+
     
-    output$overview_status_plot <- renderPlotly({
-        req(arten_data)
-        
-        daten <- arten_data %>%
-            group_by(gefaehrdung) %>%
-            summarise(anzahl = n(), .groups = 'drop') %>%
-            left_join(kategorien, by = c("gefaehrdung" = "code"))
-        
-        daten$gefaehrdung <- factor(daten$gefaehrdung, levels = c("LC", "NT", "VU", "EN", "CR", "RE", "EX"))
-        
-        plot_ly(daten, x = ~gefaehrdung, y = ~anzahl, type = 'bar',
-                marker = list(color = c("#4D8126", "#72B043", "#F8CC1B", "#F37324", "#E12729", "#9A0002", "black")), #hier nimmt er die noch nicht bzw ich dneke er assigned die nach riehenfolge des erschienens im datensatz
-                text = ~paste(anzahl, "Arten"),
-                hoverinfo = 'text') %>%
-            layout(xaxis = list(title = "", tickangle = -45),
-                   yaxis = list(title = "Anzahl Arten"),
-                   showlegend = FALSE)
-    })
     
+    arten_count <- arten_data %>%
+        filter(gefaehrdung %in% reihenfolge) %>%
+        group_by(gefaehrdung) %>%
+        summarise(Anzahl = n(), .groups = "drop") %>%
+        complete(gefaehrdung = reihenfolge, fill = list(Anzahl = 0)) %>%
+        left_join(kategorien %>% select(code, farbe, name), by = c("gefaehrdung" = "code")) %>%
+        mutate(gefaehrdung = factor(gefaehrdung, levels = reihenfolge))
+    
+    # Plot
+    barplotgefaehrdung<- ggplot(arten_count, aes(x = gefaehrdung, y = Anzahl, fill = farbe, text = name)) +
+        geom_bar(stat = "identity") +
+        scale_fill_identity() +
+        labs(
+            x = "Gefährdungskategorie",
+            y = "Anzahl der Arten",
+            title = "Anzahl der Arten pro Gefährdungskategorie"
+        ) +
+        theme_minimal() +
+        theme(
+            text = element_text(size = 12),
+            axis.text.x = element_text(angle = 45, hjust = 1)
+        )
+  
+   output$overview_status_plot <- renderPlotly({ggplotly(barplotgefaehrdung, tooltip = c("x", "y", "text"))})
+    
+
     output$overview_tiergruppe_ui <- renderUI({
         if (is.null(arten_data)) {
             div(class = "info-box no-data",
