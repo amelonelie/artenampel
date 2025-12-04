@@ -18,9 +18,9 @@ library(readxl)
 library(leaflet)
 library(jsonlite)
 library(tidyr)
-
+library(httr)
 # Funktion zum Laden der Excel-Datei
-load_excel_data <- function(filepath = "C:/Users/oscha/Documents/GitHub/artenampel/ameliestry/rote_liste_saeugetiere_2005.xlsx") {
+load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/GitHub/artenampel/ameliestry/rote_liste_saeugetiere_2005.xlsx") {
     tryCatch({
         data <- read_excel(filepath)
         # Bereinige Spaltennamen
@@ -81,7 +81,10 @@ ui <- fluidPage(
                                     selected = NULL,
                                     multiple = FALSE)
                  ),
-                 column(6, uiOutput("art_info_ui"))
+                 column(6, 
+                        uiOutput("art_info_ui"),
+                        uiOutput("art_image_ui")
+                 )
              ),
              fluidRow(
                  column(12, uiOutput("arten_tabelle_ui"))
@@ -89,6 +92,55 @@ ui <- fluidPage(
     ),
     
 )
+
+# Function to get image URL from Wikimedia Commons
+get_wikimedia_image <- function(scientific_name) {
+    tryCatch({
+        # URL encode the scientific name
+        encoded_name <- URLencode(scientific_name)
+        
+        # First, get the page title from Wikipedia
+        wiki_url <- paste0(
+            "https://en.wikipedia.org/w/api.php?",
+            "action=query&format=json&prop=pageimages&piprop=original&",
+            "titles=", encoded_name
+        )
+        
+        wiki_response <- httr::GET(wiki_url)
+        wiki_data <- httr::content(wiki_response, "parsed")
+        
+        # Extract image URL from response
+        pages <- wiki_data$query$pages
+        page <- pages[[1]]
+        
+        if (!is.null(page$original$source)) {
+            return(page$original$source)
+        }
+        
+        # If no image found, try Wikimedia Commons search
+        commons_url <- paste0(
+            "https://commons.wikimedia.org/w/api.php?",
+            "action=query&format=json&prop=imageinfo&iiprop=url&",
+            "generator=search&gsrnamespace=6&gsrsearch=", encoded_name,
+            "&gsrlimit=1"
+        )
+        
+        commons_response <- httr::GET(commons_url)
+        commons_data <- httr::content(commons_response, "parsed")
+        
+        if (!is.null(commons_data$query$pages)) {
+            page <- commons_data$query$pages[[1]]
+            if (!is.null(page$imageinfo[[1]]$url)) {
+                return(page$imageinfo[[1]]$url)
+            }
+        }
+        
+        return(NULL)
+    }, error = function(e) {
+        return(NULL)
+    })
+}
+
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
@@ -254,7 +306,40 @@ server <- function(input, output, session) {
         }
     })
     
-    
+    # Art-Bild von Wikimedia
+    output$art_image_ui <- renderUI({
+        if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
+            return(NULL)
+        }
+        
+        art_info <- arten_data %>%
+            filter(deutscher_name == input$Art)
+        
+        if (nrow(art_info) == 0) {
+            return(NULL)
+        }
+        
+        wissenschaftlicher_name <- art_info$wissenschaftlicher_name
+        
+        # Get image URL
+        image_url <- get_wikimedia_image(wissenschaftlicher_name)
+        
+        if (!is.null(image_url)) {
+            div(class = "info-box species-image",
+                h3("Artenfoto"),
+                tags$img(src = image_url, 
+                         alt = wissenschaftlicher_name,
+                         style = "max-width: 100%; height: auto; border-radius: 8px;"),
+                tags$p(style = "font-size: 0.8em; color: #666; margin-top: 10px;",
+                       "Bild: Wikimedia Commons")
+            )
+        } else {
+            div(class = "info-box no-data",
+                h3("Artenfoto"),
+                div(class = "no-data-overlay",
+                    "Kein Bild verfügbar"))
+        }
+    })
     # Artentabelle
     output$arten_tabelle_ui <- renderUI({
         if (is.null(arten_data)) {
