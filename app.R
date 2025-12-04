@@ -87,7 +87,7 @@ ui <- fluidPage(
                  column(6, 
                         uiOutput("art_info_ui"),
                         uiOutput("art_image_ui"), 
-                        uiOutput("art_map_ui")
+                        uiOutput("art_map_ui")),
                  column(3, 
                         uiOutput("art_info_ui")),
                  column(3,
