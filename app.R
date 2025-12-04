@@ -9,47 +9,223 @@
 
 library(shiny)
 
+#später nochmal überprüfen ob wir wirklich alle brauchen
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(DT)
+library(readxl)
+library(leaflet)
+library(jsonlite)
+
+# Funktion zum Laden der Excel-Datei
+load_excel_data <- function(filepath = "/Users/amelonelie/Downloads/ameliestry/rote_liste_saeugetiere_2005.xlsx") {
+    tryCatch({
+        data <- read_excel(filepath)
+        # Bereinige Spaltennamen
+        colnames(data) <- c("wissenschaftlicher_name", "deutscher_name", 
+                            "gefaehrdung", "tiergruppe", "tiergruppe_deutsch")
+        return(data)
+    }, error = function(e) {
+        message("Excel-Datei nicht gefunden. Bitte Pfad anpassen.")
+        return(NULL)
+    })
+}
+
+# Lade lokale Artendaten
+arten_data <- load_excel_data()
+
+kategorien <- data.frame(
+    code = c("EX","RE", "EW", "CR", "EN", "VU", "NT", "LC", "DD", "NE"),
+    name = c("Ausgestorben", "Regional ausgestorben","In der Natur ausgestorben", "Vom Aussterben bedroht",
+             "Stark gefährdet", "Gefährdet", "Potenziell gefährdet", 
+             "Nicht gefährdet", "Unzureichende Datenlage", "Nicht bewertet"),
+    farbe = c("#000000", "#3D1244","#9C2007", "#D81E05", "#F37324", "#F8CC1B", #die können eigentlich raus
+              "#72B043", "#4D8126", "#D1D1C6", "#DDDDDD"),
+    stringsAsFactors = FALSE
+)
+
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     tags$head(
-        tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
+        tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
         tags$meta(name = "viewport", content = "width=device-width, initial-scale=1")
 
     ),
+    # Header mit Logo
+    div(class = "main-header",
+        tags$img(src = "logo.png", height = "200px", style = "margin-bottom: 15px;"),
+        div(class = "subtitle", "Interaktives Dashboard für gefährdete Arten")
+    ),
+    tabPanel("Lokale Artendaten",
+             fluidRow(style = "margin-top: 20px;",
+                      column(3, uiOutput("stat_gesamt_ui")),
+                      column(3, uiOutput("stat_gefaehrdet_ui")),
+                      column(3, uiOutput("stat_kritisch_ui")),
+                      column(3, uiOutput("stat_prozent_ui"))
+             ),
+             fluidRow(
+                 column(6, uiOutput("overview_status_ui")),
+                 column(6, uiOutput("overview_tiergruppe_ui"))
+             ),
+             fluidRow(
+                 column(12, uiOutput("arten_tabelle_ui"))
+             )
+    ),
     
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
-    )
 )
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white',
-             xlab = 'Waiting time to next eruption (in mins)',
-             main = 'Histogram of waiting times')
+server <- function(input, output, session) {
+    # Lokale Daten - Statistiken
+    output$stat_gesamt_ui <- renderUI({
+        if (is.null(arten_data)) {
+            div(class = "stat-box no-data",
+                div(class = "stat-number no-data", "?"),
+                div(class = "stat-label", "Erfasste Arten"))
+        } else {
+            div(class = "stat-box",
+                div(class = "stat-number", nrow(arten_data)),
+                div(class = "stat-label", "Erfasste Arten"))
+        }
     })
+    
+    output$stat_gefaehrdet_ui <- renderUI({
+        if (is.null(arten_data)) {
+            div(class = "stat-box no-data",
+                div(class = "stat-number no-data", "?"),
+                div(class = "stat-label", "Gefährdete Arten"))
+        } else {
+            gefaehrdet <- arten_data %>% filter(gefaehrdung %in% c("CR", "EN", "VU")) %>% nrow()
+            div(class = "stat-box",
+                div(class = "stat-number", gefaehrdet),
+                div(class = "stat-label", "Gefährdete Arten"))
+        }
+    })
+    
+    output$stat_kritisch_ui <- renderUI({
+        if (is.null(arten_data)) {
+            div(class = "stat-box no-data",
+                div(class = "stat-number no-data", "?"),
+                div(class = "stat-label", "Kritisch bedroht"))
+        } else {
+            kritisch <- arten_data %>% filter(gefaehrdung == "CR") %>% nrow()
+            div(class = "stat-box",
+                div(class = "stat-number", kritisch),
+                div(class = "stat-label", "Kritisch bedroht"))
+        }
+    })
+    
+    output$stat_prozent_ui <- renderUI({
+        if (is.null(arten_data)) {
+            div(class = "stat-box no-data",
+                div(class = "stat-number no-data", "?"),
+                div(class = "stat-label", "% Gefährdet"))
+        } else {
+            total <- nrow(arten_data)
+            gefaehrdet <- arten_data %>% filter(gefaehrdung %in% c("CR", "EN", "VU")) %>% nrow()
+            prozent <- round(gefaehrdet / total * 100)
+            div(class = "stat-box",
+                div(class = "stat-number", paste0(prozent, "%")),
+                div(class = "stat-label", "% Gefährdet"))
+        }
+    })
+    
+    # Lokale Daten - Plots
+    output$overview_status_ui <- renderUI({
+        if (is.null(arten_data)) {
+            div(class = "info-box no-data",
+                h3("Gefährdungsstatus nach Kategorie"),
+                div(class = "no-data-overlay",
+                    "⚠ Keine lokalen Artendaten verfügbar", br(),
+                    "Bitte Excel-Datei laden"))
+        } else {
+            div(class = "info-box",
+                h3("Gefährdungsstatus nach Kategorie"),
+                plotlyOutput("overview_status_plot", height = "350px"))
+        }
+    })
+    
+    output$overview_status_plot <- renderPlotly({
+        req(arten_data)
+        
+        daten <- arten_data %>%
+            group_by(gefaehrdung) %>%
+            summarise(anzahl = n(), .groups = 'drop') %>%
+            left_join(kategorien, by = c("gefaehrdung" = "code"))
+        
+        daten$gefaehrdung <- factor(daten$gefaehrdung, levels = c("LC", "NT", "VU", "EN", "CR", "RE", "EX"))
+        
+        plot_ly(daten, x = ~gefaehrdung, y = ~anzahl, type = 'bar',
+                marker = list(color = c("#4D8126", "#72B043", "#F8CC1B", "#F37324", "#E12729", "#9A0002", "black")), #hier nimmt er die noch nicht bzw ich dneke er assigned die nach riehenfolge des erschienens im datensatz
+                text = ~paste(anzahl, "Arten"),
+                hoverinfo = 'text') %>%
+            layout(xaxis = list(title = "", tickangle = -45),
+                   yaxis = list(title = "Anzahl Arten"),
+                   showlegend = FALSE)
+    })
+    
+    output$overview_tiergruppe_ui <- renderUI({
+        if (is.null(arten_data)) {
+            div(class = "info-box no-data",
+                h3("Verteilung nach Tiergruppen"),
+                div(class = "no-data-overlay",
+                    "⚠ Keine lokalen Artendaten verfügbar", br(),
+                    "Bitte Excel-Datei laden"))
+        } else {
+            div(class = "info-box",
+                h3("Verteilung nach Tiergruppen"),
+                plotlyOutput("overview_tiergruppe_plot", height = "350px"))
+        }
+    })
+    
+    output$overview_tiergruppe_plot <- renderPlotly({
+        req(arten_data)
+        
+        daten <- arten_data %>%
+            group_by(tiergruppe_deutsch) %>%
+            summarise(anzahl = n(), .groups = 'drop')
+        
+        plot_ly(daten, labels = ~tiergruppe_deutsch, values = ~anzahl, 
+                type = 'pie',
+                marker = list(colors = c('#DA2A1D', '#F37324', '#F8CC1B', '#72B043', '#80B0D5', '#0061AB')),
+                textinfo = 'label+percent') %>%
+            layout(showlegend = TRUE)
+    })
+
+    # Artentabelle
+    output$arten_tabelle_ui <- renderUI({
+        if (is.null(arten_data)) {
+            div(class = "info-box no-data",
+                h3("Artenliste"),
+                div(class = "no-data-overlay",
+                    "⚠ Keine lokalen Artendaten verfügbar", br(),
+                    "Bitte Excel-Datei 'arten.xlsx' im Arbeitsverzeichnis platzieren"))
+        } else {
+            div(class = "info-box",
+                h3("Artenliste"),
+                DT::dataTableOutput("arten_tabelle"))
+        }
+    })
+    
+    output$arten_tabelle <- DT::renderDataTable({
+        req(arten_data)
+        
+        daten <- arten_data %>%
+            left_join(kategorien, by = c("gefaehrdung" = "code")) %>%
+            select(deutscher_name, wissenschaftlicher_name, name, tiergruppe_deutsch) %>%
+            rename("Deutscher Name" = deutscher_name,
+                   "Wissenschaftlicher Name" = wissenschaftlicher_name,
+                   "Gefährdungsstatus" = name,
+                   "Tiergruppe" = tiergruppe_deutsch)
+        
+        datatable(daten, options = list(
+            pageLength = 15,
+            language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/German.json')
+        ))
+    })
+    
 }
 
 # Run the application 
