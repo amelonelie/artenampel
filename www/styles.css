@@ -2,36 +2,40 @@
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background-color: white;
             }
+
             .main-header {
                 background: white;
-                color:  #DA2A1D;
+                color: #DA2A1D;
                 padding: 30px 20px;
                 margin: -15px -15px 20px -15px;
                 border-bottom: 6px solid #DA2A1D;
                 text-align: center;
             }
-            
-            
-                        .stat-box {
+
+
+            .stat-box {
                 background: white;
                 border-radius: 12px;
                 padding: 25px;
                 text-align: center;
-                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
                 transition: transform 0.2s;
                 height: 140px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
             }
+
             .stat-box:hover {
                 transform: translateY(-4px);
-                box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
             }
+
             .stat-box.no-data {
                 background-color: #f9f9f9;
                 opacity: 0.7;
             }
+
             .stat-number {
                 font-size: 2.8em;
                 font-weight: bold;
@@ -39,9 +43,11 @@
                 line-height: 1;
                 margin-bottom: 8px;
             }
+
             .stat-number.no-data {
                 color: #999;
             }
+
             .stat-label {
                 color: #666;
                 font-size: 1em;
@@ -56,6 +62,16 @@
 .species-image img:hover {
     transform: scale(1.02);
 }
+
+            .species-image img {
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                transition: transform 0.2s;
+            }
+
+            .species-image img:hover {
+                transform: scale(1.02);
+            }
+
             hr {
                 height: 6px;
                 border-width: 0;
@@ -64,4 +80,5 @@
                 margin-bottom: 20px;
                 margin-left: -15px;
                 margin-right: -15px;
+            }
             }

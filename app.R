@@ -19,6 +19,8 @@ library(leaflet)
 library(jsonlite)
 library(tidyr)
 library(httr)
+library(rgbif)
+library(leaflet)
 # Funktion zum Laden der Excel-Datei
 load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/GitHub/artenampel/ameliestry/rote_liste_saeugetiere_2005.xlsx") {
     tryCatch({
@@ -84,7 +86,8 @@ ui <- fluidPage(
                  ),
                  column(6, 
                         uiOutput("art_info_ui"),
-                        uiOutput("art_image_ui")
+                        uiOutput("art_image_ui"), 
+                        uiOutput("art_map_ui")
                  )
              ),
              hr(),
@@ -144,7 +147,37 @@ get_wikimedia_image <- function(scientific_name) {
     })
 }
 
-
+get_gbif_occurrences <- function(scientific_name, limit = 500) {
+    tryCatch({
+        all_occurrences <- NULL
+        countries <- c("AT", "DE", "CH")
+        limit_per_country <- ceiling(limit / 3)
+        
+        for (country in countries) {
+            occ_data <- occ_search(
+                scientificName = scientific_name,
+                hasCoordinate = TRUE,
+                limit = limit_per_country,
+                country = country
+            )
+            
+            if (!is.null(occ_data$data) && nrow(occ_data$data) > 0) {
+                country_data <- occ_data$data %>%
+                    select(scientificName, decimalLatitude, decimalLongitude, 
+                           eventDate, basisOfRecord, countryCode) %>%
+                    filter(!is.na(decimalLatitude), !is.na(decimalLongitude))
+                
+                all_occurrences <- bind_rows(all_occurrences, country_data)
+            }
+        }
+        
+        return(all_occurrences)
+        
+    }, error = function(e) {
+        message("GBIF Error: ", e$message)
+        return(NULL)
+    })
+}
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
     # Lokale Daten - Statistiken
@@ -342,6 +375,87 @@ server <- function(input, output, session) {
                 div(class = "no-data-overlay",
                     "Kein Bild verfügbar"))
         }
+    })
+    # Art-Verbreitungskarte von GBIF
+    output$art_map_ui <- renderUI({
+        if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
+            return(NULL)
+        }
+        
+        art_info <- arten_data %>%
+            filter(deutscher_name == input$Art)
+        
+        if (nrow(art_info) == 0) {
+            return(NULL)
+        }
+        
+        div(class = "info-box species-map",
+            h3("Verbreitungskarte"),
+            leafletOutput(paste0("map_", gsub(" ", "_", input$Art)), 
+                          height = "400px"),
+            tags$p(style = "font-size: 0.8em; color: #666; margin-top: 10px;",
+                   "Daten: GBIF (Global Biodiversity Information Facility)")
+        )
+    })
+    
+    # Art-Verbreitungskarte von GBIF
+    observe({
+        if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
+            return(NULL)
+        }
+        
+        art_info <- arten_data %>%
+            filter(deutscher_name == input$Art)
+        
+        if (nrow(art_info) == 0) {
+            return(NULL)
+        }
+        
+        wissenschaftlicher_name <- art_info$wissenschaftlicher_name
+        map_id <- paste0("map_", gsub(" ", "_", input$Art))
+        
+        # Get GBIF occurrences
+        occurrences <- get_gbif_occurrences(wissenschaftlicher_name)
+        
+        output[[map_id]] <- renderLeaflet({
+            if (is.null(occurrences) || nrow(occurrences) == 0) {
+                # Show empty map centered on DACH region
+                leaflet() %>%
+                    addTiles() %>%
+                    setView(lng = 10.5, lat = 47.5, zoom = 6) %>%  # Centered on DACH region
+                    addControl(
+                        html = "<div style='background: white; padding: 10px; border-radius: 5px;'>
+                        Keine Verbreitungsdaten verfügbar</div>",
+                        position = "topright"
+                    )
+            } else {
+                # Create map with occurrence points
+                leaflet(occurrences) %>%
+                    addTiles() %>%
+                    addCircleMarkers(
+                        lng = ~decimalLongitude,
+                        lat = ~decimalLatitude,
+                        radius = 5,
+                        color = "#e74c3c",
+                        fillColor = "#e74c3c",
+                        fillOpacity = 0.6,
+                        stroke = TRUE,
+                        weight = 1,
+                        clusterOptions = markerClusterOptions(),
+                        popup = ~paste0(
+                            "<strong>", scientificName, "</strong><br>",
+                            "Land: ", ifelse(!is.na(countryCode), countryCode, "Unbekannt"), "<br>",
+                            "Datum: ", ifelse(!is.na(eventDate), eventDate, "Unbekannt"), "<br>",
+                            "Typ: ", basisOfRecord
+                        )
+                    ) %>%
+                    addControl(
+                        html = paste0("<div style='background: white; padding: 10px; border-radius: 5px;'>
+                              <strong>", nrow(occurrences), " Fundorte (AT, DE, CH)</strong></div>"),
+                        position = "topright"
+                    )
+            }
+        })
     })
     # Artentabelle
     output$arten_tabelle_ui <- renderUI({
