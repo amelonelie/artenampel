@@ -82,8 +82,9 @@ ui <- fluidPage(
                       column(3, uiOutput("stat_prozent_ui"))
              ),
              fluidRow(
-                 column(6, uiOutput("overview_status_ui")),
-                 column(6, uiOutput("overview_tiergruppe_ui"))
+                 column(4, uiOutput("overview_status_ui")),
+                 column(4, uiOutput("overview_tiergruppe_ui")),
+                 column(4, uiOutput("overview_tempevo_ui"))
              ),
              hr(),
              fluidRow(
@@ -323,7 +324,7 @@ server <- function(input, output, session) {
             layout(showlegend = TRUE)
     })
     
-    tempevo<-ggplot(data_long, aes(x = Year, y = Count, color = Group)) +
+    tempevo<-ggplot(temporal_data, aes(x = Year, y = Count, color = Group)) +
         geom_line(linewidth = 1) +
         geom_point(size = 2) +
         
