@@ -77,12 +77,13 @@ ui <- fluidPage(
                  column(3, 
                         selectInput("Tiergruppe", "Wähle eine Tiergruppe aus",
                                     choices = unique(arten_data$tiergruppe_deutsch)
-
+                                    
                         ),
                         selectInput("Art", "Wähle eine Art aus",
                                     choices = NULL,
                                     selected = NULL,
-                                    multiple = FALSE)
+                                    multiple = FALSE),
+                        uiOutput("art_endanger_status")
                  ),
                  column(6, 
                         uiOutput("art_info_ui"),
@@ -252,7 +253,7 @@ server <- function(input, output, session) {
                 plotlyOutput("overview_status_plot", height = "350px"))
         }
     })
-
+    
     
     
     arten_count <- arten_data %>%
@@ -277,10 +278,10 @@ server <- function(input, output, session) {
             text = element_text(size = 12),
             axis.text.x = element_text(angle = 45, hjust = 1)
         )
-  
-   output$overview_status_plot <- renderPlotly({ggplotly(barplotgefaehrdung, tooltip = c("x", "y", "text"))})
     
-
+    output$overview_status_plot <- renderPlotly({ggplotly(barplotgefaehrdung, tooltip = c("x", "y", "text"))})
+    
+    
     output$overview_tiergruppe_ui <- renderUI({
         if (is.null(arten_data)) {
             div(class = "info-box no-data",
@@ -322,6 +323,49 @@ server <- function(input, output, session) {
         updateSelectInput(session, "Art",
                           choices = arten_in_tiergruppe,
                           selected = "")
+    })
+    
+    
+    # Anzeige des Gefährdungsstatus der ausgewählten Art 
+    # Bild anzeigen was bereits den entsprechenden namen hat z.b. ausgestorben.png
+    # ausgestorben.png
+    # gefaehrdet.png
+    # indernaturausgestorben.png
+    # nichtbewertet.png
+    # nichtgefaehrdet.png
+    # potenziellgefaehrdet.png
+    # regionalausgestorben.png
+    # starkgefaehrdet.png
+    # unzureichendedatenlage.png
+    # vomaussterbenbedroht.png
+    output$art_endanger_status <- renderUI({
+        if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
+            return(NULL)
+        }
+        
+        art_info <- arten_data %>%
+            filter(deutscher_name == input$Art)
+        
+        if (nrow(art_info) == 0) {
+            return(NULL)
+        }
+        
+        gefaehrdung_code <- art_info$gefaehrdung
+        status_info <- kategorien %>%
+            filter(code == gefaehrdung_code)
+        
+        if (nrow(status_info) == 0) {
+            return(NULL)
+        }
+        
+        div(class = "info-box species-status",
+            h3("Gefährdungsstatus"),
+            tags$img(src = paste0(gefaehrdung_code, ".png"), 
+                     alt = status_info$name,
+                     style = "max-width: 100%; height: auto; border-radius: 8px;"),
+            tags$p(style = "font-size: 1.2em; font-weight: bold; margin-top: 10px;",
+                   status_info$name)
+        )
     })
     
     # Art-Informationen
