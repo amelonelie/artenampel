@@ -327,45 +327,42 @@ server <- function(input, output, session) {
     
     
     # Anzeige des Gefährdungsstatus der ausgewählten Art 
-    # Bild anzeigen was bereits den entsprechenden namen hat z.b. ausgestorben.png
-    # ausgestorben.png
-    # gefaehrdet.png
-    # indernaturausgestorben.png
-    # nichtbewertet.png
-    # nichtgefaehrdet.png
-    # potenziellgefaehrdet.png
-    # regionalausgestorben.png
-    # starkgefaehrdet.png
-    # unzureichendedatenlage.png
-    # vomaussterbenbedroht.png
+    images <- list(
+        EX = "ausgestorben.png",
+        RE = "regionalausgestorben.png",
+        EW = "indernaturausgestorben.png",
+        CR = "vomaussterbenbedroht.png",
+        EN = "starkgefaehrdet.png",
+        VU = "gefaehrdet.png",
+        NT = "potenziellgefaehrdet.png",
+        LC = "nichtgefaehrdet.png",
+        DD = "unzureichendedatenlage.png",
+        NE = "nichtbewertet.png"
+    )
     output$art_endanger_status <- renderUI({
         if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
             return(NULL)
         }
         
         art_info <- arten_data %>%
-            filter(deutscher_name == input$Art)
+            filter(deutscher_name == input$Art) %>%
+            left_join(kategorien, by = c("gefaehrdung" = "code"))
         
         if (nrow(art_info) == 0) {
             return(NULL)
         }
         
-        gefaehrdung_code <- art_info$gefaehrdung
-        status_info <- kategorien %>%
-            filter(code == gefaehrdung_code)
-        
-        if (nrow(status_info) == 0) {
-            return(NULL)
+        status_code <- art_info$gefaehrdung
+        status_name <- art_info$name
+
+        if (status_code %in% names(images)) {
+            div(class = "info-box species-status",
+                tags$img(src = images[[status_code]], 
+                         alt = status_name,
+                         style = "max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;")
+            )
         }
         
-        div(class = "info-box species-status",
-            h3("Gefährdungsstatus"),
-            tags$img(src = paste0(gefaehrdung_code, ".png"), 
-                     alt = status_info$name,
-                     style = "max-width: 100%; height: auto; border-radius: 8px;"),
-            tags$p(style = "font-size: 1.2em; font-weight: bold; margin-top: 10px;",
-                   status_info$name)
-        )
     })
     
     # Art-Informationen
