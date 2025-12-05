@@ -22,7 +22,7 @@ library(httr)
 library(rgbif)
 library(leaflet)
 # Funktion zum Laden der Excel-Datei
-load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/GitHub/artenampel/ameliestry/rote_liste_saeugetiere_2005.xlsx") {
+load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/GitHub/artenampel/data/rote_liste.xlsx") {
     tryCatch({
         data <- read_excel(filepath)
         # Bereinige Spaltennamen
@@ -35,8 +35,9 @@ load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/Gi
     })
 }
 
-# Lade lokale Artendaten
+# Lade lokale Daten
 arten_data <- load_excel_data()
+temporal_data <-read.csv2("/Users/amelonelie/Documents/Programme/GitHub/artenampel/data/temporaldata.csv", sep = ",")
 
 kategorien <- data.frame(
     code = c("EX","RE", "EW", "CR", "EN", "VU", "NT", "LC", "DD", "NE"),
@@ -48,6 +49,10 @@ kategorien <- data.frame(
     stringsAsFactors = FALSE
 )
 reihenfolge <- c("LC", "NT", "VU", "EN", "CR", "RE", "EX")
+temporalcolors <- c(
+    "#9C2007", "#D81E05",
+    "#F37324", "#F8CC1B", "#72B043", "#4D8126", "#80B0D5", "#0061AB"
+)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -310,7 +315,22 @@ server <- function(input, output, session) {
             layout(showlegend = TRUE)
     })
     
+    tempevo<-ggplot(data_long, aes(x = Year, y = Count, color = Group)) +
+        geom_line(linewidth = 1) +
+        geom_point(size = 2) +
+        
+        scale_color_manual(values = temporalcolors) +
+        theme_minimal(base_size = 14) +
+        labs(
+            title = "Temporal Evolution of Species Counts by Group",
+            x = "Year",
+            y = "Number of Species",
+            color = "Group"
+        )
     
+    output$overview_tempevo_ui<-renderPlotly({
+        ggplotly(tempevo, tooltip = c("x", "y", "text"))
+    })
     
     
     # Dynamische Aktualisierung der Art-Auswahl basierend auf der ausgewählten Tiergruppe
