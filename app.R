@@ -287,7 +287,7 @@ server <- function(input, output, session) {
             axis.text.x = element_text(angle = 45, hjust = 1)
         )
     
-    output$overview_status_plot <- renderPlotly({ggplotly(barplotgefaehrdung, tooltip = c("x", "y", "text"))})
+    output$overview_status_plot <- renderPlotly({ggplotly(barplotgefaehrdung, tooltip = c("x", "y", "text")) %>% style(showlegend = FALSE)})
     
     
     output$overview_tiergruppe_ui <- renderUI({
