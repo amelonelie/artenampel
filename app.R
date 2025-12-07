@@ -56,7 +56,7 @@ kategorien <- data.frame(
     name = c("Ausgestorben", "Regional ausgestorben","In der Natur ausgestorben", "Vom Aussterben bedroht",
              "Stark gefährdet", "Gefährdet", "Potenziell gefährdet", 
              "Nicht gefährdet", "Unzureichende Datenlage", "Nicht bewertet"),
-    farbe = c("#000000", "#3D1244","#9C2007", "#D81E05", "#F37324", "#F8CC1B", #die können eigentlich raus
+    farbe = c("#000000", "#3D1244","#9C2007", "#D81E05", "#F37324", "#F8CC1B", 
               "#72B043", "#4D8126", "#D1D1C6", "#DDDDDD"),
     stringsAsFactors = FALSE
 )
@@ -132,54 +132,6 @@ ui <- fluidPage(
     ),
     
 )
-
-# Function to get image URL from Wikimedia Commons
-get_wikimedia_image <- function(scientific_name) {
-    tryCatch({
-        # URL encode the scientific name
-        encoded_name <- URLencode(scientific_name)
-        
-        # First, get the page title from Wikipedia
-        wiki_url <- paste0(
-            "https://en.wikipedia.org/w/api.php?",
-            "action=query&format=json&prop=pageimages&piprop=original&",
-            "titles=", encoded_name
-        )
-        
-        wiki_response <- httr::GET(wiki_url)
-        wiki_data <- httr::content(wiki_response, "parsed")
-        
-        # Extract image URL from response
-        pages <- wiki_data$query$pages
-        page <- pages[[1]]
-        
-        if (!is.null(page$original$source)) {
-            return(page$original$source)
-        }
-        
-        # If no image found, try Wikimedia Commons search
-        commons_url <- paste0(
-            "https://commons.wikimedia.org/w/api.php?",
-            "action=query&format=json&prop=imageinfo&iiprop=url&",
-            "generator=search&gsrnamespace=6&gsrsearch=", encoded_name,
-            "&gsrlimit=1"
-        )
-        
-        commons_response <- httr::GET(commons_url)
-        commons_data <- httr::content(commons_response, "parsed")
-        
-        if (!is.null(commons_data$query$pages)) {
-            page <- commons_data$query$pages[[1]]
-            if (!is.null(page$imageinfo[[1]]$url)) {
-                return(page$imageinfo[[1]]$url)
-            }
-        }
-        
-        return(NULL)
-    }, error = function(e) {
-        return(NULL)
-    })
-}
 
 get_gbif_occurrences <- function(scientific_name, limit = 500) {
     tryCatch({
