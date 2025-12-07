@@ -562,7 +562,8 @@ server <- function(input, output, session) {
         
         datatable(daten, options = list(
             pageLength = 15,
-            language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/German.json')
+            language = list(url = "https://cdn.datatables.net/plug-ins/1.13.5/i18n/de-DE.json")
+            
         ))
     })
     
