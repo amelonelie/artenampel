@@ -95,7 +95,7 @@ ui <- fluidPage(
              fluidRow(
                  column(3, 
                         selectInput("Tiergruppe", "Wähle eine Tiergruppe aus",
-                                    choices = unique(arten_data$tiergruppe_deutsch)
+                                    choices = sort(unique(arten_data$tiergruppe_deutsch))
                                     
                         ),
                         selectInput("Art", "Wähle eine Art aus",
@@ -452,7 +452,8 @@ server <- function(input, output, session) {
         req(input$Tiergruppe)
         arten_in_tiergruppe <- arten_data %>%
             filter(tiergruppe_deutsch == input$Tiergruppe) %>%
-            pull(deutscher_name)
+            pull(deutscher_name) %>%
+            sort()
         
         updateSelectInput(session, "Art",
                           choices = arten_in_tiergruppe,
