@@ -78,7 +78,7 @@ ui <- fluidPage(
              fluidRow(
                  column(4, uiOutput("overview_status_ui")),
                  column(4, uiOutput("overview_tiergruppe_ui")),
-                 column(4, plotlyOutput("overview_tempevo_ui"))
+                 column(4, uiOutput("overview_tempevo_ui"))
              ),
              hr(),
              fluidRow(
@@ -340,21 +340,34 @@ server <- function(input, output, session) {
         mutate(gefaehrdung = factor(gefaehrdung, levels = reihenfolge))
     
     # Plot
-    barplotgefaehrdung<- ggplot(arten_count, aes(x = gefaehrdung, y = Anzahl, fill = farbe, text = name)) +
-        geom_bar(stat = "identity") +
-        scale_fill_identity() +
-        labs(
-            x = "Gefährdungskategorie",
-            y = "Anzahl der Arten",
-            title = "Anzahl der Arten pro Gefährdungskategorie"
-        ) +
-        theme_minimal() +
-        theme(
-            text = element_text(size = 12),
-            axis.text.x = element_text(angle = 45, hjust = 1)
-        )
+    output$overview_status_plot <- renderPlotly({
+        req(arten_count)
+        
+        plot_ly(
+            arten_count,
+            x = ~gefaehrdung,
+            y = ~Anzahl,
+            type = "bar",
+            marker = list(color = ~farbe),
+            customdata = ~name,
+            hovertemplate = paste(
+                    "Anzahl: %{y}<br>",
+                "%{customdata}<extra></extra>"
+            )
+        ) %>%
+            layout(
+                xaxis = list(
+                    title = "Gefährdungskategorie"
+                ),
+                yaxis = list(
+                    title = "Anzahl der Arten"
+                ),
+                showlegend = FALSE,
+                plot_bgcolor = "#ffffff",
+                paper_bgcolor = "#ffffff"
+            )
+    })
     
-    output$overview_status_plot <- renderPlotly({ggplotly(barplotgefaehrdung, tooltip = c("x", "y", "text")) %>% style(showlegend = FALSE)})
     
     
     output$overview_tiergruppe_ui <- renderUI({
@@ -385,22 +398,42 @@ server <- function(input, output, session) {
             layout(showlegend = TRUE)
     })
     
-    tempevo<-ggplot(temporal_data, aes(x = Year, y = Count, color = Group)) +
-        geom_line(linewidth = 1) +
-        geom_point(size = 2) +
-        
-        scale_color_manual(values = temporalcolors) +
-        theme_minimal(base_size = 14) +
-        labs(
-            title = "Temporal Evolution of Species Counts by Group",
-            x = "Year",
-            y = "Number of Species",
-            color = "Group"
-        )
-    
-    output$overview_tempevo_ui<-renderPlotly({
-        ggplotly(tempevo, tooltip = c("x", "y", "text"))
+    output$overview_tempevo_ui <- renderUI({
+        if (is.null(temporal_data)) {
+            div(class = "info-box no-data",
+                h3("Zeitliche Entwicklung der bedrohten Arten"),
+                div(class = "no-data-overlay",
+                    "⚠ Keine lokalen Zeitreihendaten verfügbar", br(),
+                    "Bitte CSV-Datei laden"))
+        } else {
+            div(class = "info-box",
+                h3("Zeitliche Entwicklung der bedrohten Arten"),
+                plotlyOutput("overview_tempevo_plot", height = "350px"))
+        }
     })
+    
+    output$overview_tempevo_plot <- renderPlotly({
+        req(temporal_data)
+        
+        plot_ly(
+            temporal_data,
+            x = ~Year,
+            y = ~Count,
+            type = 'scatter',
+            mode = 'lines',
+            color = ~Group,
+            colors = temporalcolors,
+            line = list(width = 2)
+        ) %>%
+            layout(
+                xaxis = list(title = "Jahr"),
+                yaxis = list(title = "Artenzahl"),
+                legend = list(title = list(text = "")),
+                plot_bgcolor = "#ffffff",
+                paper_bgcolor = "#ffffff"
+            )
+    })
+    
     
     
     # Dynamische Aktualisierung der Art-Auswahl basierend auf der ausgewählten Tiergruppe
