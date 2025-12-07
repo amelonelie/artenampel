@@ -38,7 +38,18 @@ load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/Gi
 
 # Lade lokale Daten
 arten_data <- load_excel_data()
-temporal_data <-read.csv2("/Users/amelonelie/Documents/Programme/GitHub/artenampel/data/temporaldata.csv", sep = ",")
+temporal_data <-read.csv2("C:/Users/oscha/Documents/GitHub/artenampel/data/temporaldata.csv", sep = ",") %>%
+    mutate(Group = recode(
+        Group,
+        "Mammals" = "Säugetiere",
+        "Birds" = "Vögel",
+        "Reptiles" = "Reptilien",
+        "Amphibians" = "Amphibien",
+        "Fishes" = "Fische",
+        "Insects" = "Insekten",
+        "Molluscs" = "Weichtiere",
+        "Fungi_protists" = "Pilze & Protisten"
+    ))
 
 kategorien <- data.frame(
     code = c("EX","RE", "EW", "CR", "EN", "VU", "NT", "LC", "DD", "NE"),
