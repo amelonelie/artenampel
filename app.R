@@ -38,7 +38,7 @@ load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/Gi
 
 # Lade lokale Daten
 arten_data <- load_excel_data()
-temporal_data <-read.csv2("C:/Users/oscha/Documents/GitHub/artenampel/data/temporaldata.csv", sep = ",") %>%
+temporal_data <-read.csv2("/Users/amelonelie/Documents/Programme/GitHub/artenampel/data/temporaldata.csv", sep = ",") %>%
     mutate(Group = recode(
         Group,
         "Mammals" = "Säugetiere",
@@ -114,6 +114,11 @@ ui <- fluidPage(
                         uiOutput("art_image_ui")
                  )
              ),
+             fluidRow(style = "margin-top: 20px;",
+                      column(4, uiOutput("stat_order_ui")),
+                      column(4, uiOutput("stat_family_ui")),
+                      column(4, uiOutput("stat_genus_ui"))
+             ),
              hr(),
              h3("Mehr als 48.600 Arten sind vom Aussterben bedroht"), 
              h4("Das sind 28 % aller bewerteten Arten."),
@@ -132,6 +137,19 @@ ui <- fluidPage(
     ),
     
 )
+
+get_gbif_taxonomy <- function(scientific_name) {
+    tryCatch({
+        taxonomy <- name_backbone(name = scientific_name)
+        return(list(
+            order = taxonomy$order,
+            family = taxonomy$family,
+            genus = taxonomy$genus
+        ))
+    }, error = function(e) {
+        return(NULL)
+    })
+}
 
 get_gbif_occurrences <- function(scientific_name, limit = 500) {
     tryCatch({
@@ -534,7 +552,7 @@ server <- function(input, output, session) {
                    "Daten: GBIF (Global Biodiversity Information Facility)")
         )
     })
-    
+
     # Art-Verbreitungskarte von GBIF
     observe({
         if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
@@ -594,6 +612,85 @@ server <- function(input, output, session) {
             }
         })
     })
+    
+    
+    output$stat_order_ui <- renderUI({
+        if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
+            return(NULL)
+        }
+        
+        art_info <- arten_data %>%
+            filter(deutscher_name == input$Art)
+        
+        if (nrow(art_info) == 0) {
+            return(NULL)
+        }
+        
+        wissenschaftlicher_name <- art_info$wissenschaftlicher_name
+        species_taxonomy<-get_gbif_taxonomy(wissenschaftlicher_name)
+        if (is.null(species_taxonomy)) {
+            div(class = "stat-box no-data",
+                div(class = "stat-number no-data", "?"),
+                div(class = "stat-label", "Ordnung"))
+        } else {
+            div(class = "stat-box",
+                div(class = "stat-number", species_taxonomy$order),
+                div(class = "stat-label", "Ordnung"))
+        }
+    })
+    
+    output$stat_family_ui <- renderUI({
+        if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
+            return(NULL)
+        }
+        
+        art_info <- arten_data %>%
+            filter(deutscher_name == input$Art)
+        
+        if (nrow(art_info) == 0) {
+            return(NULL)
+        }
+        
+        wissenschaftlicher_name <- art_info$wissenschaftlicher_name
+        species_taxonomy<-get_gbif_taxonomy(wissenschaftlicher_name)
+        if (is.null(species_taxonomy)) {
+            div(class = "stat-box no-data",
+                div(class = "stat-number no-data", "?"),
+                div(class = "stat-label", "Familie"))
+        } else {
+            div(class = "stat-box",
+                div(class = "stat-number", species_taxonomy$family),
+                div(class = "stat-label", "Familie"))
+        }
+    })
+    
+    output$stat_genus_ui <- renderUI({
+        if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
+            return(NULL)
+        }
+        
+        art_info <- arten_data %>%
+            filter(deutscher_name == input$Art)
+        
+        if (nrow(art_info) == 0) {
+            return(NULL)
+        }
+        
+        wissenschaftlicher_name <- art_info$wissenschaftlicher_name
+        species_taxonomy<-get_gbif_taxonomy(wissenschaftlicher_name)
+        if (is.null(species_taxonomy)) {
+            div(class = "stat-box no-data",
+                div(class = "stat-number no-data", "?"),
+                div(class = "stat-label", "Genus"))
+        } else {
+            div(class = "stat-box",
+                div(class = "stat-number", species_taxonomy$genus),
+                div(class = "stat-label", "Genus"))
+        }
+    })
+    
+    
+    
     # Artentabelle
     output$arten_tabelle_ui <- renderUI({
         if (is.null(arten_data)) {
