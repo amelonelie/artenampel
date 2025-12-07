@@ -23,9 +23,12 @@ library(rgbif)
 library(leaflet)
 
 # Funktion zum Laden der Excel-Datei
-load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/GitHub/artenampel/data/rote_liste.xlsx") {
+load_excel_data <- function(filepath = "https://github.com/amelonelie/artenampel/raw/refs/heads/main/data/rote_liste.xlsx") {
     tryCatch({
-        data <- read_excel(filepath)
+        temp_file <- tempfile(fileext = ".xlsx")
+        download.file(filepath, temp_file, mode = "wb")  # mode = "wb" wichtig für Binärdateien
+
+        data <- read_excel(temp_file)
         # Bereinige Spaltennamen
         colnames(data) <- c("wissenschaftlicher_name", "deutscher_name", 
                             "gefaehrdung", "tiergruppe", "tiergruppe_deutsch")
@@ -38,7 +41,7 @@ load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/Gi
 
 # Lade lokale Daten
 arten_data <- load_excel_data()
-temporal_data <-read.csv2("/Users/amelonelie/Documents/Programme/GitHub/artenampel/data/temporaldata.csv", sep = ",") %>%
+temporal_data <-read.csv2("https://github.com/amelonelie/artenampel/raw/refs/heads/main/data/temporaldata.csv", sep = ",") %>%
     mutate(Group = recode(
         Group,
         "Mammals" = "Säugetiere",
