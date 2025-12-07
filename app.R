@@ -66,14 +66,7 @@ ui <- fluidPage(
         tags$img(src = "logo.png", height = "200px", style = "margin-bottom: 15px;"),
         div(class = "subtitle", "Interaktives Dashboard für gefährdete Arten")
     ),
-    # add image threatenedspecies.png
-    div(class = "threatened-species-image", style= "background-color: #ad180d;padding: 20px;margin-left: -20px;margin-right: -20px;",
-        tags$img(src = "threatenedspecies.png", height = "250px", 
-        style = "margin-bottom: 15px;display: block;margin-left: auto;margin-right: auto;background-color: #DA2A1D;")
-    ),
-    
-    hr(),
-    
+
     tabPanel("Lokale Artendaten",
              fluidRow(style = "margin-top: 20px;",
                       column(3, uiOutput("stat_gesamt_ui")),
@@ -84,7 +77,7 @@ ui <- fluidPage(
              fluidRow(
                  column(4, uiOutput("overview_status_ui")),
                  column(4, uiOutput("overview_tiergruppe_ui")),
-                 column(4, uiOutput("overview_tempevo_ui"))
+                 column(4, plotlyOutput("overview_tempevo_ui"))
              ),
              hr(),
              fluidRow(
@@ -110,6 +103,16 @@ ui <- fluidPage(
                  )
              ),
              hr(),
+             h3("Mehr als 48.600 Arten sind vom Aussterben bedroht"), 
+             h4("Das sind 28 % aller bewerteten Arten."),
+             # add image threatenedspecies.png
+             div(class = "threatened-species-image", style= "background-color: #ad180d;padding: 20px;margin-left: -20px;margin-right: -20px;",
+                 tags$img(src = "threatenedspecies.png", height = "250px", 
+                          style = "margin-bottom: 15px;display: block;margin-left: auto;margin-right: auto;background-color: #DA2A1D;")
+             ),
+             
+             hr(),
+             
              
              fluidRow(
                  column(12, uiOutput("arten_tabelle_ui"))
