@@ -222,10 +222,7 @@ get_gbif_image <- function(scientific_name) {
                 if (!is.null(result$media) && length(result$media) > 0) {
                     for (media in result$media) {
                         # Check if it's an image
-                        if (!is.null(media$identifier)# && 
-                            #(grepl("\\.(jpg|jpeg|png)$", media$identifier, ignore.case = TRUE) ||
-                            # grepl("static\\.inaturalist|inaturalist\\.org", media$identifier))
-                            ) {
+                        if (!is.null(media$identifier)) {
                             
                             return(list(
                                 url = media$identifier,
