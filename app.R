@@ -21,6 +21,7 @@ library(tidyr)
 library(httr)
 library(rgbif)
 library(leaflet)
+
 # Funktion zum Laden der Excel-Datei
 load_excel_data <- function(filepath = "/Users/amelonelie/Documents/Programme/GitHub/artenampel/data/rote_liste.xlsx") {
     tryCatch({
@@ -197,6 +198,63 @@ get_gbif_occurrences <- function(scientific_name, limit = 500) {
         
     }, error = function(e) {
         message("GBIF Error: ", e$message)
+        return(NULL)
+    })
+}
+
+# Function to get image from GBIF Species API
+get_gbif_image <- function(scientific_name) {
+    tryCatch({
+        # URL encode the scientific name
+        encoded_name <- URLencode(scientific_name)
+        
+        # Get species match from GBIF
+        match_url <- paste0("https://api.gbif.org/v1/species/match?name=", encoded_name)
+        match_response <- httr::GET(match_url)
+        match_data <- httr::content(match_response, "parsed")
+        
+        if (is.null(match_data$usageKey)) {
+            return(NULL)
+        }
+        
+        usage_key <- match_data$usageKey
+        
+        # Get occurrences with images
+        occ_url <- paste0(
+            "https://api.gbif.org/v1/occurrence/search?",
+            "taxonKey=", usage_key,
+            "&mediaType=StillImage",
+            "&limit=20"
+        )
+        
+        occ_response <- httr::GET(occ_url)
+        occ_data <- httr::content(occ_response, "parsed")
+        
+        if (!is.null(occ_data$results) && length(occ_data$results) > 0) {
+            # Look through results for images
+            for (result in occ_data$results) {
+                if (!is.null(result$media) && length(result$media) > 0) {
+                    for (media in result$media) {
+                        # Check if it's an image
+                        if (!is.null(media$identifier) && 
+                            (grepl("\\.(jpg|jpeg|png)$", media$identifier, ignore.case = TRUE) ||
+                             grepl("static\\.inaturalist|inaturalist\\.org", media$identifier))) {
+                            
+                            return(list(
+                                url = media$identifier,
+                                license = if(!is.null(media$license)) media$license else "",
+                                creator = if(!is.null(media$creator)) media$creator else "",
+                                source = if(grepl("inaturalist", media$identifier, ignore.case = TRUE)) "iNaturalist" else "GBIF"
+                            ))
+                        }
+                    }
+                }
+            }
+        }
+        
+        return(NULL)
+    }, error = function(e) {
+        message("GBIF Image Error: ", e$message)
         return(NULL)
     })
 }
@@ -419,7 +477,8 @@ server <- function(input, output, session) {
         }
     })
     
-    # Art-Bild von Wikimedia
+    
+    # Art-Bild von GBIF
     output$art_image_ui <- renderUI({
         if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
             return(NULL)
@@ -434,17 +493,20 @@ server <- function(input, output, session) {
         
         wissenschaftlicher_name <- art_info$wissenschaftlicher_name
         
-        # Get image URL
-        image_url <- get_wikimedia_image(wissenschaftlicher_name)
+        # Get image from GBIF
+        image_data <- get_gbif_image(wissenschaftlicher_name)
         
-        if (!is.null(image_url)) {
+        if (!is.null(image_data)) {
+            # Create attribution text
+            attribution <- "Bild: GBIF (Global Biodiversity Information Facility)"
+            
             div(class = "info-box species-image",
                 h3("Artenfoto"),
-                tags$img(src = image_url, 
+                tags$img(src = image_data$url, 
                          alt = wissenschaftlicher_name,
                          style = "max-width: 100%; height: auto; border-radius: 8px;"),
                 tags$p(style = "font-size: 0.8em; color: #666; margin-top: 10px;",
-                       "Bild: Wikimedia Commons")
+                       attribution)
             )
         } else {
             div(class = "info-box no-data",
@@ -453,6 +515,7 @@ server <- function(input, output, session) {
                     "Kein Bild verfügbar"))
         }
     })
+    
     # Art-Verbreitungskarte von GBIF
     output$art_map_ui <- renderUI({
         if (is.null(arten_data) || is.null(input$Art) || input$Art == "") {
