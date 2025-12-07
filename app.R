@@ -1,10 +1,7 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    https://shiny.posit.co/
+# Die Artenampel zeigt auf einfache Weise, ob eine bestimmte Art bedroht ist und wenn ja, wie stark. 
+# Außerdem bekommt ihr einen Überblick über die allgemeine Entwicklung bei bedrohten Tierarten und darüber, 
+# wie es um unsere Biodiversität steht. Ein aktuelles Thema, das dringend etwas Ordnung und Übersicht braucht.
 #
 
 library(shiny)
@@ -684,11 +681,11 @@ server <- function(input, output, session) {
         if (is.null(species_taxonomy)) {
             div(class = "stat-box no-data",
                 div(class = "stat-number no-data", "?"),
-                div(class = "stat-label", "Genus"))
+                div(class = "stat-label", "Gattung"))
         } else {
             div(class = "stat-box",
                 div(class = "stat-number", species_taxonomy$genus),
-                div(class = "stat-label", "Genus"))
+                div(class = "stat-label", "Gattung"))
         }
     })
     
